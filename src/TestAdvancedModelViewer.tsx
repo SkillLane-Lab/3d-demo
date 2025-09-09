@@ -56,7 +56,7 @@ const AdvancedModelViewerDemo: React.FC = () => {
   const [variants, setVariants] = useState<string[]>([]);
   const [variant, setVariant] = useState('');
 
-  // const [exposure, setExposure] = useState(0.95);
+  const [exposure, setExposure] = useState(0.95);
   const [autoRotate, setAutoRotate] = useState(true);
 
   const [groups, setGroups] = useState(DEFAULT_GROUPS);
@@ -267,6 +267,7 @@ const AdvancedModelViewerDemo: React.FC = () => {
         environment-image={ENV_URL}
         skybox-image={ENV_URL}
         tone-mapping="aces"
+        exposure={String(exposure)}
         shadow-intensity="0.6"
         shadow-softness="0.8"
         camera-orbit={cameraOrbit}
