@@ -9,10 +9,11 @@ import '@google/model-viewer';
  * - Material Variants (KHR_materials_variants) dropdown
  * - "Layer-like" part toggles by material groups (hide/show via alpha)
  * - Material inspector (toggle per material)
+ * - Model selector (switch between multiple GLB files)
  *
  * Usage:
- *   1) Place your GLB at /public/models/test5-chicken.glb (or change MODEL_URL)
- *   2) Place an HDR equirect map at /public/hdr/venice_sunset_1k.hdr (or change ENV_URL)
+ *   1) Put your GLBs under /public/models and edit MODEL_OPTIONS
+ *   2) Put an HDR equirect map at /public/hdr/venice_sunset_1k.hdr (or change ENV_URL)
  *   3) Import and render <AdvancedModelViewerDemo /> in App.tsx
  */
 
@@ -23,7 +24,15 @@ type MVElement = HTMLElement & {
   model?: any;
 };
 
-const MODEL_URL = '/models/test2.glb';
+// Preset model options (edit these paths to your files under /public)
+const MODEL_OPTIONS = [
+  { label: 'Test 1 (default)', src: '/models/test1.glb' },
+  { label: 'Test 2', src: '/models/test2.glb' },
+  { label: 'Test 3', src: '/models/test3.glb' },
+  { label: 'Test 5 Chicken', src: '/models/test5-chicken.glb' },
+  { label: 'Test 6 Car', src: '/models/test6-car.glb' },
+];
+
 const ENV_URL = '/hdr/venice_sunset_1k.hdr';
 
 // Configure your part groups by matching material name substrings.
@@ -38,6 +47,11 @@ const DEFAULT_GROUPS: Record<string, string[]> = {
 
 const AdvancedModelViewerDemo: React.FC = () => {
   const mvRef = useRef<MVElement | null>(null);
+  // Track the actual element to (re)bind events when model changes or element remounts
+  const [mvEl, setMvEl] = useState<MVElement | null>(null);
+
+  // Model switching
+  const [currentModel, setCurrentModel] = useState<string>(MODEL_OPTIONS[0].src);
 
   const [variants, setVariants] = useState<string[]>([]);
   const [variant, setVariant] = useState('');
@@ -61,9 +75,20 @@ const AdvancedModelViewerDemo: React.FC = () => {
   // Cache original baseColorFactor per material so we can restore after hiding
   const originalColor = useRef<Map<string, [number, number, number, number]>>(new Map());
 
-  // Read variants and preload material names when loaded
+  // When model changes: reset state so inspector/variants are fresh
   useEffect(() => {
-    const el = mvRef.current;
+    setVariants([]);
+    setVariant('');
+    setMaterials([]);
+    setMaterialVisibility({});
+    originalColor.current.clear();
+    // Reset group visibility to default
+    setGroupVisibility({ Body: true, Details: true, Eyes: true, Beak: true, Comb: true });
+  }, [currentModel]);
+
+  // Read variants and preload material names when the element fires 'load'
+  useEffect(() => {
+    const el = mvEl;
     if (!el) return;
 
     const onLoad = () => {
@@ -99,7 +124,7 @@ const AdvancedModelViewerDemo: React.FC = () => {
 
     el.addEventListener('load', onLoad);
     return () => el.removeEventListener('load', onLoad);
-  }, []);
+  }, [mvEl, currentModel]);
 
   // Apply variant changes
   useEffect(() => {
@@ -164,12 +189,28 @@ const AdvancedModelViewerDemo: React.FC = () => {
     <div className="w-full max-w-6xl mx-auto p-4">
       <h2 className="text-xl font-semibold mb-3">Interactive Viewer</h2>
 
+      {/* Top controls */}
       <div className="flex flex-wrap items-center gap-3 mb-3">
+        {/* Model selector */}
+        <div className="flex items-center gap-2">
+          <span className="opacity-80">Model</span>
+          <select
+            className="border rounded px-2 py-1"
+            value={currentModel}
+            onChange={(e)=> setCurrentModel(e.target.value)}
+          >
+            {MODEL_OPTIONS.map(m => (
+              <option key={m.src} value={m.src}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+
         <label className="inline-flex items-center gap-2">
           <input type="checkbox" checked={autoRotate} onChange={(e)=> setAutoRotate(e.target.checked)} />
           Auto-rotate
         </label>
 
+        {/* Exposure slider (optional) */}
         {/* <div className="flex items-center gap-2">
           <span className="opacity-80">Exposure</span>
           <input type="range" min={0.2} max={2} step={0.05} value={exposure} onChange={(e)=> setExposure(parseFloat(e.target.value))} />
@@ -186,17 +227,15 @@ const AdvancedModelViewerDemo: React.FC = () => {
         )}
       </div>
 
-      {/* Group toggles 
-      <div className="flex flex-wrap items-center gap-4 mb-2">
+      {/* Optional: Group toggles */}
+      {/* <div className="flex flex-wrap items-center gap-4 mb-2">
         {Object.keys(groups).map((k) => (
           <label key={k} className="inline-flex items-center gap-2">
             <input type="checkbox" checked={!!groupVisibility[k]} onChange={onChangeGroup(k)} />
             {k}
           </label>
         ))}
-      </div>
-
-      */}
+      </div> */}
 
       {/* Materials inspector */}
       {materials.length > 0 && (
@@ -218,10 +257,11 @@ const AdvancedModelViewerDemo: React.FC = () => {
       )}
 
       <model-viewer
-        ref={mvRef as any}
-        src={MODEL_URL}
-        alt="Chicken 3D preview"
-        style={{ width: '100%', height: 560, background: '#0f172a', borderRadius: 12 }}
+        key={currentModel} // force re-init on model switch
+        ref={(el) => { mvRef.current = el as MVElement | null; setMvEl(el as MVElement | null); }}
+        src={currentModel}
+        alt="3D preview"
+        style={{ minWidth: 1200, width: '100%', height: 560, background: '#0f172a', borderRadius: 12 }}
         camera-controls
         {...(autoRotate ? { 'auto-rotate': '' } : {})}
         environment-image={ENV_URL}
@@ -236,8 +276,7 @@ const AdvancedModelViewerDemo: React.FC = () => {
       />
 
       <p className="mt-3 text-sm opacity-80">
-        หมายเหตุ: รายการ Materials จะดึงจาก GLB ที่โหลด แล้วคุณสามารถซ่อนเป็นราย material ได้ทันที.
-        หากต้องการจัดกลุ่มแบบถาวร ให้ปรับ <code>DEFAULT_GROUPS</code> ให้ตรงกับชื่อวัสดุจริงของโมเดลไก่.
+        Tip: Edit <code>MODEL_OPTIONS</code> to point to your GLB files. The inspector resets on each model change.
       </p>
     </div>
   );
