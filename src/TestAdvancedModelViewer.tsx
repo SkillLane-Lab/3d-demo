@@ -24,16 +24,18 @@ type MVElement = HTMLElement & {
   model?: any;
 };
 
+const BASE = import.meta.env.BASE_URL;
+
 // Preset model options (edit these paths to your files under /public)
 const MODEL_OPTIONS = [
-  { label: 'Test 1 (default)', src: '/models/test1.glb' },
-  { label: 'Test 2', src: '/models/test2.glb' },
-  { label: 'Test 3', src: '/models/test3.glb' },
-  { label: 'Test 5 Chicken', src: '/models/test5-chicken.glb' },
-  { label: 'Test 6 Car', src: '/models/test6-car.glb' },
+  { label: 'Test 1 (default)', src: `${BASE}models/test1.glb` },
+  { label: 'Test 2', src: `${BASE}models/test2.glb` },
+  { label: 'Test 3', src: `${BASE}models/test3.glb` },
+  { label: 'Test 5 Chicken', src: `${BASE}models/test5-chicken.glb` },
+  { label: 'Test 6 Car', src: `${BASE}models/test6-car.glb` },
 ];
 
-const ENV_URL = '/hdr/venice_sunset_1k.hdr';
+const ENV_URL = `${BASE}hdr/venice_sunset_1k.hdr`;
 
 // Configure your part groups by matching material name substrings.
 // Adjust these to your model's real material names (inspect via console once loaded).
